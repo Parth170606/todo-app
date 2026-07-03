@@ -1,4 +1,4 @@
-const BASE_URL = "http://localhost:5000";
+const BASE_URL = "https://todo-backend-rqf0.onrender.com";
 
 function showSection(section) {
 

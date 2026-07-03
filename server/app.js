@@ -1,79 +1,104 @@
 const express = require("express");
-const dotenv = require("dotenv");
 const cors = require("cors");
-const path = require("path");
+const dotenv = require("dotenv");
+
 const pool = require("./db");
+
+// Routes
 const todoRoutes = require("./routes/todoRoutes");
 const authRoutes = require("./routes/authRoutes");
-const authLimiter =require("./middleware/rateLimiter");
 
 dotenv.config();
 
 const app = express();
-app.use(authLimiter);
 
-app.use(cors());
+// =======================
+// Middleware
+// =======================
+
+// During development
+app.use(cors({
+    origin: [
+        "http://localhost:5500",
+        "http://127.0.0.1:5500",
+        "https://your-vercel-app.vercel.app"
+    ],
+    credentials: true
+}));
+
+// Parse JSON requests
 app.use(express.json());
 
-app.use("/todos", todoRoutes);
+// =======================
+// Routes
+// =======================
 
-const PORT = process.env.PORT || 5000;
-
-app.use(express.static(path.join(__dirname, "../client")));
-
-// Test route
+// Home Route
 app.get("/", (req, res) => {
     res.send("Todo API is running 🚀");
 });
 
-app.use("/todos", todoRoutes);
+// Database Test Route
+app.get("/test-db", async (req, res) => {
+    try {
+
+        const result = await pool.query("SELECT NOW()");
+
+        res.json({
+            success: true,
+            serverTime: result.rows[0].now
+        });
+
+    } catch (error) {
+
+        console.error(error);
+
+        res.status(500).json({
+            success: false,
+            message: "Database connection failed"
+        });
+
+    }
+});
+
+// Authentication Routes
 app.use("/auth", authRoutes);
 
-// Database test route
-app.get("/test-db", async (req, res) => {
-  try {
-    const result = await pool.query("SELECT NOW()");
-    res.json({
-      success: true,
-      serverTime: result.rows[0].now,
+// Todo Routes
+app.use("/todos", todoRoutes);
+
+// =======================
+// 404 Handler
+// =======================
+
+app.use((req, res) => {
+    res.status(404).json({
+        success: false,
+        message: "Route not found"
     });
-  } catch (error) {
-    console.error("Database Error:", error);
+});
+
+// =======================
+// Global Error Handler
+// =======================
+
+app.use((err, req, res, next) => {
+
+    console.error(err.stack);
 
     res.status(500).json({
         success: false,
-        message: error.message,
+        message: "Internal Server Error"
     });
-}
+
 });
+
+// =======================
+// Start Server
+// =======================
+
+const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`);
+    console.log(`🚀 Server running on http://localhost:${PORT}`);
 });
-
-const createTodo = async (req, res) => {
-    try {
-        const { title } = req.body;
-
-        if (!title || title.trim() === "") {
-            return res.status(400).json({
-                message: "Title is required"
-            });
-        }
-
-        const result = await pool.query(
-            `INSERT INTO todos (title)
-             VALUES ($1)
-             RETURNING *`,
-            [title]
-        );
-
-        res.status(201).json(result.rows[0]);
-
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({
-            message: "Failed to create todo"
-        });
-    }
-};
