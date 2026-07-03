@@ -1,8 +1,8 @@
 const nodemailer = require("nodemailer");
 
 const transporter = nodemailer.createTransport({
-    host: "smtp.gmail.com",
-    port: 587,
+    host: process.env.EMAIL_HOST,
+    port: Number(process.env.EMAIL_PORT),
     secure: false,
     auth: {
         user: process.env.EMAIL_USER,
@@ -12,43 +12,19 @@ const transporter = nodemailer.createTransport({
 
 const sendOTPEmail = async (email, otp) => {
 
-    try {
+    const info = await transporter.sendMail({
+        from: process.env.EMAIL_FROM,
+        to: email,
+        subject: "Reset Your TodoFlow Password",
+        html: `
+            <h2>Password Reset Request</h2>
+            <p>Your OTP is:</p>
+            <h1>${otp}</h1>
+            <p>This OTP expires in 10 minutes.</p>
+        `
+    });
 
-        const mailOptions = {
-
-            from: process.env.EMAIL_USER,
-
-            to: email,
-
-            subject: "Reset Your Todo App Password",
-
-            html: `
-                <h2>Password Reset Request</h2>
-
-                <p>Your OTP is:</p>
-
-                <h1 style="color:blue;">${otp}</h1>
-
-                <p>This OTP expires in <b>10 minutes</b>.</p>
-
-                <p>If you didn't request this password reset,
-                please ignore this email.</p>
-            `
-        };
-
-        const info = await transporter.sendMail(mailOptions);
-
-        console.log("Email Sent!");
-        console.log(info.response);
-
-    } catch (error) {
-
-        console.error(error);
-
-        throw error;
-
-    }
-
+    console.log(info.messageId);
 };
 
 module.exports = sendOTPEmail;
