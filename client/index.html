@@ -1176,13 +1176,13 @@
     </div><!-- /app-wrapper -->
 
     <!-- ============================================================
-    JAVASCRIPT — FULL APP
+    JAVASCRIPT — FULL APP (integrated with your updated script.js)
     ============================================================ -->
     <script>
         // ============================================================
-        //  CONFIG
+        //  CONFIG — using your backend URL
         // ============================================================
-        const BASE_URL = "http://localhost:5000";
+        const BASE_URL = "https://todo-backend-rqf0.onrender.com";
 
         // ============================================================
         //  DOM REFS
@@ -1218,11 +1218,12 @@
         }
 
         // ============================================================
-        //  MESSAGE BOX (inline)
+        //  MESSAGE BOX (inline) — enhanced version of your showMessage
         // ============================================================
         function showMessage(msg, type = 'info') {
             if (!msg) {
                 messageBox.classList.remove('show', 'success', 'error', 'info');
+                messageBox.textContent = '';
                 return;
             }
             messageBox.textContent = msg;
@@ -1230,7 +1231,7 @@
         }
 
         // ============================================================
-        //  SECTION NAVIGATION
+        //  SECTION NAVIGATION — your version (enhanced with animations)
         // ============================================================
         function showSection(section) {
             const sections = ['register', 'login', 'forgot', 'verify', 'reset', 'dashboard'];
@@ -1244,7 +1245,6 @@
             const target = document.getElementById(section);
             if (target) {
                 target.style.display = 'block';
-                // small delay for animation
                 requestAnimationFrame(() => {
                     target.classList.add('active');
                 });
@@ -1254,7 +1254,7 @@
         }
 
         // ============================================================
-        //  AUTH API
+        //  AUTH API — your updated functions
         // ============================================================
         async function register() {
             const name = document.getElementById('registerName').value.trim();
@@ -1271,19 +1271,23 @@
             }
 
             try {
-                const res = await fetch(`${BASE_URL}/auth/register`, {
+                const response = await fetch(`${BASE_URL}/auth/register`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ name, email, password })
                 });
-                const data = await res.json();
-                showMessage(data.message || 'Registration successful!', data.success !== false ? 'success' : 'error');
+                const data = await response.json();
+                showMessage(data.message, data.success !== false ? 'success' : 'error');
                 if (data.success !== false) {
                     document.getElementById('registerName').value = '';
                     document.getElementById('registerEmail').value = '';
                     document.getElementById('registerPassword').value = '';
                     document.getElementById('loginEmail').value = email;
+                    showToast('🎉 Account created! Please login.', 'success');
+                    fireConfetti(60);
                     setTimeout(() => showSection('login'), 1200);
+                } else {
+                    showToast(data.message || 'Registration failed', 'error');
                 }
             } catch (err) {
                 showMessage('Network error. Is the server running?', 'error');
@@ -1301,12 +1305,12 @@
             }
 
             try {
-                const res = await fetch(`${BASE_URL}/auth/login`, {
+                const response = await fetch(`${BASE_URL}/auth/login`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ email, password })
                 });
-                const data = await res.json();
+                const data = await response.json();
 
                 if (data.token) {
                     localStorage.setItem('token', data.token);
@@ -1318,9 +1322,10 @@
                     updateUIForAuth(userName);
                     showSection('dashboard');
                     await fetchTodos();
-                    todoInput.focus();
+                    document.getElementById('todoInput').focus();
                 } else {
                     showMessage(data.message || 'Login failed.', 'error');
+                    showToast(data.message || 'Login failed', 'error');
                 }
             } catch (err) {
                 showMessage('Network error. Is the server running?', 'error');
@@ -1337,15 +1342,18 @@
             localStorage.setItem('resetEmail', email);
 
             try {
-                const res = await fetch(`${BASE_URL}/auth/forgot-password`, {
+                const response = await fetch(`${BASE_URL}/auth/forgot-password`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ email })
                 });
-                const data = await res.json();
-                showMessage(data.message || 'OTP sent to your email.', 'success');
+                const data = await response.json();
+                showMessage(data.message, data.success !== false ? 'success' : 'error');
                 if (data.success !== false) {
+                    showToast('📧 OTP sent to your email.', 'success');
                     setTimeout(() => showSection('verify'), 800);
+                } else {
+                    showToast(data.message || 'Failed to send OTP', 'error');
                 }
             } catch (err) {
                 showMessage('Network error. Is the server running?', 'error');
@@ -1366,18 +1374,20 @@
             }
 
             try {
-                const res = await fetch(`${BASE_URL}/auth/verify-otp`, {
+                const response = await fetch(`${BASE_URL}/auth/verify-otp`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ email, otp })
                 });
-                const data = await res.json();
+                const data = await response.json();
                 if (data.success) {
                     localStorage.setItem('otp', otp);
                     showMessage('OTP verified! Set your new password.', 'success');
+                    showToast('✅ OTP verified!', 'success');
                     setTimeout(() => showSection('reset'), 600);
                 } else {
                     showMessage(data.message || 'Invalid OTP. Please try again.', 'error');
+                    showToast(data.message || 'Invalid OTP', 'error');
                 }
             } catch (err) {
                 showMessage('Network error. Is the server running?', 'error');
@@ -1386,9 +1396,9 @@
         }
 
         async function resetPassword() {
-            const newPassword = document.getElementById('newPassword').value;
             const email = localStorage.getItem('resetEmail');
             const otp = localStorage.getItem('otp');
+            const newPassword = document.getElementById('newPassword').value;
 
             if (!newPassword || newPassword.length < 6) {
                 showMessage('Password must be at least 6 characters.', 'error');
@@ -1400,20 +1410,22 @@
             }
 
             try {
-                const res = await fetch(`${BASE_URL}/auth/reset-password`, {
+                const response = await fetch(`${BASE_URL}/auth/reset-password`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ email, otp, newPassword })
                 });
-                const data = await res.json();
+                const data = await response.json();
                 if (data.success) {
                     showMessage('Password reset successfully! Please login.', 'success');
+                    showToast('🔐 Password reset!', 'success');
                     localStorage.removeItem('otp');
                     localStorage.removeItem('resetEmail');
                     document.getElementById('newPassword').value = '';
                     setTimeout(() => showSection('login'), 1000);
                 } else {
                     showMessage(data.message || 'Failed to reset password.', 'error');
+                    showToast(data.message || 'Failed to reset', 'error');
                 }
             } catch (err) {
                 showMessage('Network error. Is the server running?', 'error');
@@ -1427,8 +1439,7 @@
             updateUIForAuth(null);
             showSection('login');
             showMessage('Logged out successfully.', 'info');
-            showToast('See you next time! 👋', 'info');
-            // Clear todos
+            showToast('👋 See you next time!', 'info');
             todos = [];
             renderTodos();
         }
@@ -1457,7 +1468,7 @@
         }
 
         // ============================================================
-        //  TODOS — CRUD
+        //  TODOS — CRUD (kept from original, using your BASE_URL)
         // ============================================================
         let todos = [];
         let currentFilter = 'all';
@@ -1898,7 +1909,6 @@
                         setTimeout(() => fireConfetti(25), 500);
                     }
                 });
-                // show a welcome toast
                 setTimeout(() => {
                     showToast('Welcome back, ' + userName + '! 🚀', 'success');
                 }, 400);
