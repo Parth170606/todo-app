@@ -21,7 +21,7 @@ app.use(cors({
     origin: [
         "http://localhost:5500",
         "http://127.0.0.1:5500",
-        "https://todo-bxdykfsor-web-applications1.vercel.app"
+        "https://todo-app-iota-two-86.vercel.app"
     ],
     credentials: true
 }));
